@@ -11,12 +11,12 @@ Baking Object's Position/Rotation/Scale Animation to Texture, and Play via Shade
 
 ![](destruction.gif)
 
-Thousands of objects are Animate via AnimationClip (Tons of AnimationCurves)
-
-### Unity Built-in Animator 
+### Unity Built-in Animation 
 
 - FPS:49.4
 - Batches: 24210
+
+Thousands of objects are Animate via AnimationClip (Tons of AnimationCurves) is too heavy
 
 ![](animationClip.jpg)
 
