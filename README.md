@@ -4,7 +4,7 @@ Baking Object's Position/Rotation/Scale Animation to Texture, and Play via Shade
 
 ![](transformAnimTexture.gif)
 
-## Optimazation
+## Optimization
 
 - Writing Object Index to mesh.uv2
 - Combine meshes per Materials to reduce Draw Call
