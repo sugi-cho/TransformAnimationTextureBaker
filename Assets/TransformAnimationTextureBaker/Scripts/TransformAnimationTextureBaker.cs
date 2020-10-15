@@ -9,19 +9,21 @@ using UnityEditor;
 
 public class TransformAnimationTextureBaker : MonoBehaviour
 {
-    public Transform transformRoot;
-    public GameObject animationRoot;
+    public Transform root;
     public AnimationClip[] clips;
-    public int fps = 30;
 
-    public Bounds bounds;
+    private void Reset()
+    {
+        if (GetComponent<Animator>() != null)
+            root = transform;
+    }
 
     [ContextMenu("bake texture")]
     void Bake()
     {
-        if (transformRoot == null || clips.Length < 1)
+        if (root == null || clips.Length < 1)
             return;
-        var transforms = transformRoot.GetComponentsInChildren<Renderer>().Select(r => r.transform).ToArray();
+        var transforms = root.GetComponentsInChildren<Renderer>().Select(r => r.transform).ToArray();
         var trsCount = transforms.Length;
 
         var min = Vector3.positiveInfinity;
@@ -29,9 +31,8 @@ public class TransformAnimationTextureBaker : MonoBehaviour
 
         foreach (var c in clips)
         {
-            var length = c.length;
-            var height = Mathf.NextPowerOfTwo((int)(length * fps));
-            var dt = length / (height - 1);
+            var height = (int)(c.length * c.frameRate);
+            var dt = 1f / c.frameRate;
 
             var posTex = CreateBakeTexture(trsCount, height, c.isLooping);
             var rotTex = CreateBakeTexture(trsCount, height, c.isLooping);
@@ -40,38 +41,43 @@ public class TransformAnimationTextureBaker : MonoBehaviour
             for (var i = 0; i < height; i++)
             {
                 var t = i * dt;
-                c.SampleAnimation(animationRoot, t);
+                c.SampleAnimation(root.gameObject, t);
                 for (var n = 0; n < trsCount; n++)
                 {
                     var trs = transforms[n];
-                    var pos = transformRoot.InverseTransformPoint(trs.position);
+                    var pos = trs.position;
                     var rot = trs.rotation;
                     var scale = trs.lossyScale;
                     posTex.SetPixel(n, i, new Color(pos.x, pos.y, pos.z));
                     rotTex.SetPixel(n, i, new Color(rot.x, rot.y, rot.z, rot.w));
                     scaleTex.SetPixel(n, i, new Color(scale.x, scale.y, scale.z));
-
-                    min = Vector3.Min(min, pos);
-                    max = Vector3.Max(max, pos);
                 }
             }
-            bounds.min = min;
-            bounds.max = max;
 
 #if UNITY_EDITOR
-            AssetDatabase.CreateAsset(posTex, $"Assets/{animationRoot.name}_{c.name}_posTex.asset");
-            AssetDatabase.CreateAsset(rotTex, $"Assets/{animationRoot.name}_{c.name}_rotTex.asset");
-            AssetDatabase.CreateAsset(scaleTex, $"Assets/{animationRoot.name}_{c.name}_scaleTex.asset");
+            if (!AssetDatabase.IsValidFolder($"Assets/{root.name}"))
+                AssetDatabase.CreateFolder("Assets", root.name);
+
+            AssetDatabase.CreateAsset(posTex, $"Assets/{root.name}/{c.name}_posTex.asset");
+            AssetDatabase.CreateAsset(rotTex, $"Assets/{root.name}/{c.name}_rotTex.asset");
+            AssetDatabase.CreateAsset(scaleTex, $"Assets/{root.name}/{c.name}_scaleTex.asset");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 #endif
         }
+        clips[0].SampleAnimation(root.gameObject, 0);
+    }
+
+    [ContextMenu("reset anim")]
+    void ResetAnim()
+    {
+        clips[0].SampleAnimation(root.gameObject, 0);
     }
 
     [ContextMenu("combine mesh")]
     void CombineMesh()
     {
-        var rs = transformRoot.GetComponentsInChildren<Renderer>();
+        var rs = root.GetComponentsInChildren<Renderer>();
         var materialCombineMap = new Dictionary<Material, List<CombineInstance>>();
 
         for (var idx = 0; idx < rs.Length; idx++)
@@ -79,12 +85,12 @@ public class TransformAnimationTextureBaker : MonoBehaviour
             var r = rs[idx];
             var mats = r.sharedMaterials;
             var mesh = r.GetComponent<MeshFilter>().sharedMesh;
+            mesh.SetUVs(2, Enumerable.Repeat(Vector2.right * idx, mesh.vertexCount).ToList());
             for (var count = 0; count < mats.Length; count++)
             {
                 var mat = r.sharedMaterials[count];
                 if (!materialCombineMap.ContainsKey(mat))
                     materialCombineMap.Add(mat, new List<CombineInstance>());
-                mesh.SetUVs(2, Enumerable.Repeat(Vector2.right * idx, mesh.vertexCount).ToList());
                 var instance = new CombineInstance()
                 {
                     mesh = mesh,
@@ -95,15 +101,17 @@ public class TransformAnimationTextureBaker : MonoBehaviour
             }
         }
 
-        foreach(var pair in materialCombineMap)
+        foreach (var pair in materialCombineMap)
         {
             var mesh = new Mesh();
             mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             mesh.CombineMeshes(pair.Value.ToArray());
-            mesh.bounds = bounds;
 
 #if UNITY_EDITOR
-            AssetDatabase.CreateAsset(mesh, $"Assets/{animationRoot.name}_{pair.Key.name}_mesh.asset");
+            if (!AssetDatabase.IsValidFolder($"Assets/{root.name}"))
+                AssetDatabase.CreateFolder("Assets", root.name);
+
+            AssetDatabase.CreateAsset(mesh, $"Assets/{root.name}/{pair.Key.name}_mesh.asset");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 #endif
