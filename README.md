@@ -27,4 +27,18 @@ Thousands of objects are Animate via AnimationClip (Tons of AnimationCurves) is 
 
 ![](textureAnimation.jpg)
 
+### [Output Textures](https://github.com/sugi-cho/TransformAnimationTextureBaker/blob/main/Assets/TransformAnimationTextureBaker/Scripts/TransformAnimationTextureBaker.cs#L41-L55)
+
+#### Texture of positions `Vector3`
+
+![](Main_posTex_converted.png)
+
+#### Texture of rotations `Quaternion`
+
+![](Main_rotTex_converted.png)
+
+#### Texture of scales `Vector3`
+
+![](Main_scaleTex_converted.png)
+
 Building-Destruction animation is created by [Yuya Torii](https://github.com/toriivfx), not included in this repo
